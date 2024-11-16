@@ -53,7 +53,7 @@ else:
         if not results:
             st.write("관련 데이터를 찾을 수 없습니다. GPT-3.5를 사용하여 답변을 생성합니다.")
             try:
-                response = client.completions.create(
+                response = client.ChatCompletion.create(
                     model="gpt-4o",
                     messages=[
                         {"role": "system", "content": "You are a historian specializing in China's Three Kingdoms period."},
