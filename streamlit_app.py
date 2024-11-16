@@ -1,64 +1,64 @@
-
 import streamlit as st
-import openai
+from openai import OpenAI
 
 # Show title and description.
-st.title("💬 삼국시대 챗봇 (GPT-4)")
+st.title("💬 삼국시대 전문 챗봇")
 st.write(
-    "이 챗봇은 중국 삼국시대(위, 촉, 오)의 주요 인물, 전투 및 역사적 사건에 대해 전문적으로 대화할 수 있습니다. "
-    "또한 GPT-4 모델을 사용하여 보다 복잡한 질문에도 답변합니다."
+    "이 챗봇은 OpenAI의 GPT 모델을 활용해 중국 삼국시대에 대한 전문적인 답변을 제공합니다. "
+    "사용하려면 OpenAI API 키를 입력하세요. API 키는 [여기서](https://platform.openai.com/account/api-keys) 얻을 수 있습니다. "
+    "또한, 앱 제작 방법에 대한 자세한 내용을 [이곳에서](https://docs.streamlit.io/develop/tutorials/llms/build-conversational-apps) 확인할 수 있습니다."
 )
-
-# Load sample Three Kingdoms data (Replace or expand this with a full dataset)
-three_kingdoms_data = [
-    {
-        "title": "Battle of Red Cliffs",
-        "content": "The Battle of Red Cliffs (208 CE) was a decisive naval battle fought between Cao Cao and the allied forces of Sun Quan and Liu Bei."
-    },
-    {
-        "title": "Zhuge Liang",
-        "content": "Zhuge Liang was a renowned strategist and statesman who served Liu Bei during the Three Kingdoms period."
-    }
-]
-
-# Function to search Three Kingdoms data
-def search_three_kingdoms(query, data):
-    results = [item for item in data if query.lower() in item['content'].lower() or query.lower() in item['title'].lower()]
-    return results
 
 # Ask user for their OpenAI API key via `st.text_input`.
 openai_api_key = st.text_input("OpenAI API Key", type="password")
 if not openai_api_key:
     st.info("Please add your OpenAI API key to continue.", icon="🗝️")
 else:
-    # Set the API key for OpenAI
-    openai.api_key = openai_api_key
+    # Create an OpenAI client.
+    client = OpenAI(api_key=openai_api_key)
 
-    # Get user input for question.
-    query = st.text_input("질문을 입력하세요:", "")
+    # Create a session state variable to store the chat messages. This ensures that the
+    # messages persist across reruns.
+    if "messages" not in st.session_state:
+        # Add a system message with instructions specific to the Three Kingdoms period.
+        st.session_state.messages = [
+            {
+                "role": "system",
+                "content": (
+                    "You are an expert on China's Three Kingdoms period (220-280 AD). "
+                    "Answer questions with detailed, accurate, and professional-level knowledge. "
+                    "When needed, include historical context, key events, and the roles of famous figures like Cao Cao, Liu Bei, Sun Quan, and Zhuge Liang. "
+                    "Feel free to discuss the cultural, military, and political aspects of the era."
+                ),
+            }
+        ]
 
-    if query:
-        # Search for relevant information in Three Kingdoms data
-        results = search_three_kingdoms(query, three_kingdoms_data)
+    # Display the existing chat messages via `st.chat_message`.
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
 
-        if results:
-            st.write("### 삼국시대 데이터에서 찾은 결과:")
-            for result in results:
-                st.write(f"#### {result['title']}")
-                st.write(result['content'])
-        
-        # If no relevant data, use OpenAI GPT-4 for extended response
-        if not results:
-            st.write("관련 데이터를 찾을 수 없습니다. GPT-4를 사용하여 답변을 생성합니다.")
-            try:
-                response = openai.ChatCompletion.create(
-                    model="gpt-4",
-                    messages=[
-                        {"role": "system", "content": "You are a historian specializing in China's Three Kingdoms period."},
-                        {"role": "user", "content": query}
-                    ]
-                )
-                st.write("### GPT-4 응답:")
-                st.write(response.choices[0].message.content)
-            except openai.error.OpenAIError as e:
-                st.error(f"Error generating response: {e}")
+    # Create a chat input field to allow the user to enter a message. This will display
+    # automatically at the bottom of the page.
+    if prompt := st.chat_input("Enter your question about the Three Kingdoms period:"):
+
+        # Store and display the current prompt.
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.markdown(prompt)
+
+        # Generate a response using the OpenAI API.
+        stream = client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": m["role"], "content": m["content"]}
+                for m in st.session_state.messages
+            ],
+            stream=True,
+        )
+
+        # Stream the response to the chat using `st.write_stream`, then store it in 
+        # session state.
+        with st.chat_message("assistant"):
+            response = st.write_stream(stream)
+        st.session_state.messages.append({"role": "assistant", "content": response})
