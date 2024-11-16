@@ -54,3 +54,53 @@ else:
         with st.chat_message("assistant"):
             response = st.write_stream(stream)
         st.session_state.messages.append({"role": "assistant", "content": response})
+
+
+
+# Three Kingdoms Chatbot Customization
+# This modification enhances the chatbot to provide specialized responses about China's Three Kingdoms period.
+
+import streamlit as st
+import json
+
+# Sample Data for Three Kingdoms (to be replaced with a complete dataset)
+sample_data = [
+    {
+        "title": "Battle of Red Cliffs",
+        "content": "The Battle of Red Cliffs (208 CE) was a decisive naval battle fought between Cao Cao and the allied forces of Sun Quan and Liu Bei."
+    },
+    {
+        "title": "Zhuge Liang",
+        "content": "Zhuge Liang was a renowned strategist and statesman who served Liu Bei during the Three Kingdoms period."
+    }
+]
+
+# Function to load data (here using sample_data)
+def load_data():
+    return sample_data
+
+# Search function to query Three Kingdoms data
+def search_data(query, data):
+    results = [item for item in data if query.lower() in item['content'].lower() or query.lower() in item['title'].lower()]
+    return results
+
+# Main Streamlit App
+def main():
+    st.title("Three Kingdoms Chatbot")
+    st.write("Ask me anything about China's Three Kingdoms period!")
+
+    data = load_data()
+    query = st.text_input("Enter your question:", "")
+
+    if query:
+        results = search_data(query, data)
+        if results:
+            st.write("### Results:")
+            for result in results:
+                st.write(f"#### {result['title']}")
+                st.write(result['content'])
+        else:
+            st.write("No relevant information found. Please try a different query.")
+
+if __name__ == "__main__":
+    main()
