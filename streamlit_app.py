@@ -1,70 +1,17 @@
+
 import streamlit as st
 from openai import OpenAI
-
-# Show title and description.
-st.title("💬 챗봇")
-st.write(
-    "This is a simple chatbot that uses OpenAI's GPT-3.5 model to generate responses. "
-    "To use this app, you need to provide an OpenAI API key, which you can get [here](https://platform.openai.com/account/api-keys). "
-    "You can also learn how to build this app step by step by [following our tutorial](https://docs.streamlit.io/develop/tutorials/llms/build-conversational-apps)."
-)
-
-# Ask user for their OpenAI API key via `st.text_input`.
-# Alternatively, you can store the API key in `./.streamlit/secrets.toml` and access it
-# via `st.secrets`, see https://docs.streamlit.io/develop/concepts/connections/secrets-management
-openai_api_key = st.text_input("OpenAI API Key", type="password")
-if not openai_api_key:
-    st.info("Please add your OpenAI API key to continue.", icon="🗝️")
-else:
-
-    # Create an OpenAI client.
-    client = OpenAI(api_key=openai_api_key)
-
-    # Create a session state variable to store the chat messages. This ensures that the
-    # messages persist across reruns.
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
-
-    # Display the existing chat messages via `st.chat_message`.
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
-
-    # Create a chat input field to allow the user to enter a message. This will display
-    # automatically at the bottom of the page.
-    if prompt := st.chat_input("What is up?"):
-
-        # Store and display the current prompt.
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
-            st.markdown(prompt)
-
-        # Generate a response using the OpenAI API.
-        stream = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": m["role"], "content": m["content"]}
-                for m in st.session_state.messages
-            ],
-            stream=True,
-        )
-
-        # Stream the response to the chat using `st.write_stream`, then store it in 
-        # session state.
-        with st.chat_message("assistant"):
-            response = st.write_stream(stream)
-        st.session_state.messages.append({"role": "assistant", "content": response})
-
-
-
-# Three Kingdoms Chatbot Customization
-# This modification enhances the chatbot to provide specialized responses about China's Three Kingdoms period.
-
-import streamlit as st
 import json
 
-# Sample Data for Three Kingdoms (to be replaced with a complete dataset)
-sample_data = [
+# Show title and description.
+st.title("💬 삼국시대 챗봇")
+st.write(
+    "이 챗봇은 중국 삼국시대(위, 촉, 오)의 주요 인물, 전투 및 역사적 사건에 대해 전문적으로 대화할 수 있습니다. "
+    "또한 GPT-4o 모델을 사용하여 보다 복잡한 질문에도 답변합니다."
+)
+
+# Load sample Three Kingdoms data (Replace or expand this with a full dataset)
+three_kingdoms_data = [
     {
         "title": "Battle of Red Cliffs",
         "content": "The Battle of Red Cliffs (208 CE) was a decisive naval battle fought between Cao Cao and the allied forces of Sun Quan and Liu Bei."
@@ -75,32 +22,45 @@ sample_data = [
     }
 ]
 
-# Function to load data (here using sample_data)
-def load_data():
-    return sample_data
-
-# Search function to query Three Kingdoms data
-def search_data(query, data):
+# Function to search Three Kingdoms data
+def search_three_kingdoms(query, data):
     results = [item for item in data if query.lower() in item['content'].lower() or query.lower() in item['title'].lower()]
     return results
 
-# Main Streamlit App
-def main():
-    st.title("Three Kingdoms Chatbot")
-    st.write("Ask me anything about China's Three Kingdoms period!")
+# Ask user for their OpenAI API key via `st.text_input`.
+openai_api_key = st.text_input("OpenAI API Key", type="password")
+if not openai_api_key:
+    st.info("Please add your OpenAI API key to continue.", icon="🗝️")
+else:
 
-    data = load_data()
-    query = st.text_input("Enter your question:", "")
+    # Create an OpenAI client.
+    client = OpenAI(api_key=openai_api_key)
+
+    # Get user input for question.
+    query = st.text_input("질문을 입력하세요:", "")
 
     if query:
-        results = search_data(query, data)
+        # Search for relevant information in Three Kingdoms data
+        results = search_three_kingdoms(query, three_kingdoms_data)
+
         if results:
-            st.write("### Results:")
+            st.write("### 삼국시대 데이터에서 찾은 결과:")
             for result in results:
                 st.write(f"#### {result['title']}")
                 st.write(result['content'])
-        else:
-            st.write("No relevant information found. Please try a different query.")
-
-if __name__ == "__main__":
-    main()
+        
+        # If no relevant data, use OpenAI GPT for extended response
+        if not results:
+            st.write("관련 데이터를 찾을 수 없습니다. GPT-3.5를 사용하여 답변을 생성합니다.")
+            try:
+                response = client.completions.create(
+                    model="gpt-4o",
+                    messages=[
+                        {"role": "system", "content": "You are a historian specializing in China's Three Kingdoms period."},
+                        {"role": "user", "content": query}
+                    ]
+                )
+                st.write("### GPT-3.5 응답:")
+                st.write(response['choices'][0]['message']['content'])
+            except Exception as e:
+                st.error(f"Error generating response: {e}")
