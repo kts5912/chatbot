@@ -60,5 +60,5 @@ else:
                 )
                 st.write("### GPT-4 응답:")
                 st.write(response.choices[0].message.content)
-            except openai.error.OpenAIError as e:
+            except Exception as e:  # Generic exception to catch all OpenAI errors
                 st.error(f"Error generating response: {e}")
