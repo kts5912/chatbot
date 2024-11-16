@@ -1,4 +1,3 @@
-
 import streamlit as st
 import openai
 
@@ -59,6 +58,6 @@ else:
                     ]
                 )
                 st.write("### GPT-4 응답:")
-                st.write(response['choices'][0]['message']['content'])
-            except openai.error.OpenAIError as e:
+                st.write(response.choices[0].message.content)
+            except Exception as e:  # Generic exception handling
                 st.error(f"Error generating response: {e}")
